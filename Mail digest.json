@@ -1,0 +1,217 @@
+{
+  "name": "Mail digest",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=From: {{ $json.From }}\nSubject: {{ $json.Subject }}\nSnippet: {{$json.snippet || ''}}\nBody (may be partial): {{\n  ($json.payload?.parts?.[0]?.body?.data || $json.payload?.body?.data || '')\n}}\n\nTask:\n1) Give a short topic (<=6 words).\n2) Summarize in 1–2 lines, plain language.\n3) Decide if action is needed from me (Yes/No). Only \"Yes\" if there is an explicit ask, deadline, approval, or blocker.\nReturn strict JSON only.\n",
+        "options": {
+          "systemMessage": "You are a concise executive assistant. Output compact, factual summaries.\nReturn strict JSON with keys: sender, topic, summary, action_needed (Yes|No)."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        400,
+        -176
+      ],
+      "id": "4eda706a-f23c-415c-9189-5c2e57bc04f5",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-5-nano",
+          "mode": "list",
+          "cachedResultName": "gpt-5-nano"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        368,
+        0
+      ],
+      "id": "722f135e-6914-4979-b6b1-5f462f257ddb",
+      "name": "OpenAI Chat Model"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "returnAll": true,
+        "filters": {
+          "labelIds": [
+            "UNREAD"
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -32,
+        -176
+      ],
+      "id": "e0f7a06e-acaf-433c-9de7-edf6a857e153",
+      "name": "Get many messages",
+      "webhookId": "b2e5ca07-5928-4002-8860-53b49c388685",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YjXtGqF7AuCCQE3A",
+          "name": "jitfit10@gmail.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 10
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -256,
+        -176
+      ],
+      "id": "d9f01bda-413b-4d99-8496-58cebf3aa50c",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "messageId": "={{$json.id}}"
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        208,
+        -176
+      ],
+      "id": "4263a7be-832b-4dfa-8fda-18300e828159",
+      "name": "Get a message",
+      "webhookId": "d5ffab6c-0401-4355-bd83-f2ac4c904cfc"
+    },
+    {
+      "parameters": {
+        "sendTo": "jitfit29@gmail.com",
+        "subject": "={{ $json.subject }}",
+        "emailType": "text",
+        "message": "={{ $json.email_text }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        944,
+        -176
+      ],
+      "id": "fcd17302-0c77-4911-8eda-5117aaa7ac85",
+      "name": "Send a message",
+      "webhookId": "951284b2-a960-4654-bd4f-7a6216baeba1",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YjXtGqF7AuCCQE3A",
+          "name": "jitfit10@gmail.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Daily Digest — clean, divided, no separator lines\n * Keeps node names:\n *   • $(\"Get many messages\")\n *   • $(\"Get a message\")\n * Outputs:\n *   • subject, email (text), email_text, email_html\n */\n\n/* ========== helpers ========== */\nconst safe = (v) => (v == null ? \"\" : String(v));\nconst esc  = (s) => safe(s).replace(/&/g,\"&amp;\").replace(/</g,\"&lt;\").replace(/>/g,\"&gt;\");\nconst trunc = (s, n=300) => (safe(s).length > n ? safe(s).slice(0, n-1) + \"…\" : safe(s));\nconst getHeader = (msg, name) => {\n  if (msg && msg[name] != null) return safe(msg[name]); // flattened fallback\n  const h = (msg?.payload?.headers || []).find(x => x.name?.toLowerCase() === name.toLowerCase());\n  return safe(h?.value || \"\");\n};\nconst parseAgentOutput = (raw) => {\n  let obj = {};\n  try { obj = JSON.parse(raw); }\n  catch {\n    const m = String(raw || \"\").match(/\\{[\\s\\S]*\\}$/);\n    obj = m ? JSON.parse(m[0]) : {};\n  }\n  const action = safe(obj.action_needed).trim();\n  return {\n    sender: safe(obj.sender),\n    topic: safe(obj.topic),\n    summary: trunc(obj.summary),\n    action_needed: /^(yes|no)$/i.test(action)\n      ? action[0].toUpperCase() + action.slice(1).toLowerCase()\n      : \"No\",\n  };\n};\n\n/* ========== gather inputs ========== */\nconst outputs = $input.all().map(it => safe(it.json.output)).filter(Boolean);\nconst messages = $(\"Get many messages\").all().map(it => it.json) || [];\nconst singleMessage = ($(\"Get a message\").all().map(it => it.json) || [])[0] || {};\n\nconst ai = outputs.map(parseAgentOutput);\nconst needsAction = ai.filter(d => d.action_needed === \"Yes\").sort((a,b)=>a.topic.localeCompare(b.topic));\nconst infoOnly    = ai.filter(d => d.action_needed !== \"Yes\").sort((a,b)=>a.topic.localeCompare(b.topic));\n\nconst now = new Date();\nconst dateStr = now.toLocaleString('en-US', { year:'numeric', month:'short', day:'2-digit', hour:'2-digit', minute:'2-digit' });\nconst subject = `Daily Digest — Actions: ${needsAction.length} — ${dateStr}`;\n\n/* ========== TEXT (no lines, divided sections) ========== */\nconst renderAIText = (title, arr) => {\n  if (!arr.length) return \"\";\n  let s = `${title} (${arr.length})\\n`;\n  arr.forEach((d, i) => {\n    s += `${i+1}) ${d.topic}\\n`;\n    s += `   From: ${d.sender}\\n`;\n    s += `   Summary: ${d.summary}\\n`;\n    s += `   Action: ${d.action_needed}\\n\\n`;\n  });\n  return s;\n};\n\nlet text = `${subject}\\n\\n`;\ntext += renderAIText(\"⚡ ACTION NEEDED\", needsAction);\ntext += renderAIText(\"ℹ️ INFORMATIONAL\", infoOnly);\n\n// Single message (optional, no lines)\nif (Object.keys(singleMessage).length) {\n  const smFrom = getHeader(singleMessage, \"From\");\n  const smSubj = getHeader(singleMessage, \"Subject\");\n  const smSnip = trunc(singleMessage.snippet || \"\", 400);\n  text += `SINGLE MESSAGE\\n`;\n  text += `From: ${smFrom}\\n`;\n  text += `Subject: ${smSubj}\\n`;\n  text += `Snippet: ${smSnip}\\n\\n`;\n}\n\n// Recent messages (optional, no lines)\nif (messages.length) {\n  text += `RECENT MESSAGES (${messages.length})\\n`;\n  messages.forEach((m, i) => {\n    const from = getHeader(m, \"From\");\n    const subj = getHeader(m, \"Subject\");\n    const snip = trunc(m.snippet || \"\", 300);\n    text += `${i+1}) ${subj}\\n`;\n    text += `   From: ${from}\\n`;\n    text += `   Snippet: ${snip}\\n\\n`;\n  });\n}\n\ntext += \"Best,\\nYour AI Assistant\";\n\n/* ========== HTML (kept clean & sectioned; no heavy borders) ========== */\nconst css = `\n  body,table,td{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}\n  .wrap{max-width:820px;margin:0 auto;padding:18px 16px 28px 16px}\n  .hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}\n  .title{font-size:18px;font-weight:700;margin:0}\n  .meta{color:#6b7280;font-size:12px}\n  .card{border:1px solid #eaecef;border-radius:12px;padding:14px 16px;margin:12px 0;background:#fff}\n  .sect-title{font-size:14px;font-weight:700;margin:0 0 8px 0}\n  table{border-collapse:collapse;width:100%}\n  th,td{padding:8px 10px;border-bottom:1px solid #f2f4f7;vertical-align:top;text-align:left}\n  thead tr th{background:#fafbfc;font-weight:600}\n  .pill{display:inline-block;border:1px solid #e5e7eb;border-radius:999px;padding:2px 8px;font-size:12px;margin-left:6px;color:#374151;background:#f9fafb}\n  .footer{color:#6b7280;font-size:12px;margin-top:18px}\n`.trim();\n\nconst baseTable = (headings, rows) => {\n  const ths = headings.length ? `<tr>${headings.map(h=>`<th>${esc(h)}</th>`).join(\"\")}</tr>` : \"\";\n  const trs = rows.length ? rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join(\"\")}</tr>`).join(\"\") : `<tr><td>No items</td></tr>`;\n  return `<table role=\"presentation\"><thead>${ths}</thead><tbody>${trs}</tbody></table>`;\n};\nconst rowsAI = (arr) => arr.map(d => ([\n  `<strong>${esc(d.topic)}</strong>`,\n  `${esc(d.summary)}`,\n  `<span class=\"pill\">${esc(d.sender)}</span>`,\n  `<span class=\"pill\">${esc(d.action_needed)}</span>`\n]));\nconst section = (title, inner) => `<div class=\"card\"><p class=\"sect-title\">${esc(title)}</p>${inner}</div>`;\n\nconst aiNeededHTML = section(`⚡ Action Needed (${needsAction.length})`,\n  baseTable([\"Topic\",\"Summary\",\"From\",\"Action\"], rowsAI(needsAction)));\nconst aiInfoHTML = section(`ℹ️ Informational (${infoOnly.length})`,\n  baseTable([\"Topic\",\"Summary\",\"From\",\"Action\"], rowsAI(infoOnly)));\n\nlet html = `<!doctype html>\n<html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width\">\n<style>${css}</style><title>${esc(subject)}</title></head>\n<body style=\"margin:0;padding:0;background:#f6f7f9;\">\n  <div class=\"wrap\">\n    <div class=\"hdr\">\n      <h2 class=\"title\">Daily Digest</h2>\n      <div class=\"meta\">${esc(dateStr)} • Actions: ${needsAction.length}</div>\n    </div>\n    ${aiNeededHTML}\n    ${aiInfoHTML}\n`;\n\n// Single message (optional)\nif (Object.keys(singleMessage).length) {\n  const smFrom = esc(getHeader(singleMessage, \"From\"));\n  const smSubj = esc(getHeader(singleMessage, \"Subject\"));\n  const smSnip = esc(trunc(singleMessage.snippet || \"\", 500));\n  html += section(\"Single Message\",\n    baseTable([\"Field\",\"Value\"], [[\"From\", smFrom], [\"Subject\", smSubj], [\"Snippet\", smSnip]]));\n}\n\n// Recent messages (optional)\nif (messages.length) {\n  const rows = messages.map((m, idx) => {\n    const from = esc(getHeader(m, \"From\"));\n    const subj = esc(getHeader(m, \"Subject\"));\n    const snip = esc(trunc(m.snippet || \"\", 400));\n    return [`#${idx+1}`, `<strong>${subj}</strong>`, `<span class=\"pill\">${from}</span>`, snip];\n  });\n  html += section(`Recent Messages (${messages.length})`, baseTable([\"#\",\"Subject\",\"From\",\"Snippet\"], rows));\n}\n\nhtml += `<p class=\"footer\">Best,<br/>Your AI Assistant</p></div></body></html>`;\n\n/* ========== output ========== */\nreturn {\n  subject,\n  email: text,\n  email_text: text,\n  email_html: html,\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        -176
+      ],
+      "id": "d2cd98a0-4a2b-4d0c-88b3-ae76abe34e1c",
+      "name": "Code"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get many messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many messages": {
+      "main": [
+        [
+          {
+            "node": "Get a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a message": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "d07ab62f-0b09-4617-af85-6dcdac5626e8",
+  "meta": {
+    "instanceId": "d755e5ce44728bcf6137490b86c05fb3770b50f6cdef6ce62b61619464084a41"
+  },
+  "id": "Yfcq98sy3gk0j16A",
+  "tags": []
+}

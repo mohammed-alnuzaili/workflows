@@ -1,0 +1,347 @@
+{
+  "name": "Linkedin Engagement Analysis google sheet",
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "39b6209c-118f-43a0-a8bf-aedcd14c8e54",
+              "name": "post url",
+              "value": "={{ $json['Post link'] }}",
+              "type": "string"
+            },
+            {
+              "id": "d3899e6c-14e5-4dc7-93cf-b65db08a3e8b",
+              "name": "post creation date",
+              "value": "={{ $json['Created date'] }}",
+              "type": "string"
+            },
+            {
+              "id": "ee39e705-c5ae-460e-a7f1-76b8a7276dd9",
+              "name": "post text content",
+              "value": "={{ $json['Post title'] }}",
+              "type": "string"
+            },
+            {
+              "id": "5f771999-821e-4e8f-aebe-7c2eff9df5fe",
+              "name": "Number of reposts ",
+              "value": "={{ $json.Reposts }}",
+              "type": "number"
+            },
+            {
+              "id": "b1be79d1-8930-4a7c-a776-aa8633f86072",
+              "name": "Number of post likes",
+              "value": "={{ $json.Likes }}",
+              "type": "number"
+            },
+            {
+              "id": "5400e5bf-107c-4a63-92d0-e39efc1ee8cb",
+              "name": "Number of post Comments",
+              "value": "={{ $json.Comments }}",
+              "type": "number"
+            },
+            {
+              "id": "c70b392e-63a1-480a-a815-4f988737a462",
+              "name": "Number of post Impressions",
+              "value": "={{ $json.Impressions }}",
+              "type": "string"
+            },
+            {
+              "id": "5c4393a1-278c-45de-8252-14e124c53ea2",
+              "name": "number of clicks on post",
+              "value": "={{ $json.Clicks }}",
+              "type": "number"
+            },
+            {
+              "id": "42fefad0-dd87-4787-aaac-26e066cda94f",
+              "name": "post engagement rate",
+              "value": "={{ $json['Engagement rate'] }}",
+              "type": "number"
+            },
+            {
+              "id": "e150dd6f-0ceb-45a0-80fd-2d72b7f82460",
+              "name": "Click through rate (CTR)",
+              "value": "={{ $json['Click through rate (CTR)'] }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -592,
+        160
+      ],
+      "id": "3ee7b135-831c-4c32-9e71-9580493f2563",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.data }}",
+        "options": {
+          "systemMessage": "=You are a professional marketing analyst producing a formal performance report for the MOBISENSE Marketing Team.\nYou will receive structured LinkedIn post data. Output a polished HTML report (ready to paste into email) with metrics, analysis, and strategic recommendations.\n\n\n🔹 Input Schema (per post)\n\nEach post object includes:\n\npost_url (string)\n\npost_creation_date (string, normal date format like “31 Aug 2025”)\n\npost_text_content (string)\n\nnumber_of_reposts (integer)\n\nnumber_of_post_likes (integer)\n\nnumber_of_post_comments (integer)\n\nnumber_of_impressions (integer | null)\n\nnumber_of_clicks (integer | null)\n\npost_engagement_rate (number; already provided — do not recalc globally)\n\nctr (number; click-through rate; may be null)\n\nTime window: Analyze only posts published within the last 6 months. Ignore older posts.\n\n\n🔹 Required Computations & Ranking\n\nRanking key: post engagement rate (descending).\n\nTie-breakers: higher CTR → higher Total Engagement → more recent post_creation_date.\n\nSelect the Top 3–5 trending posts by this ranking.\n\n\n🔹 Categorize Each Post\n\nAssign exactly one of these categories per post:\n\nEducational → Explainers, thought leadership, whitepapers, standards explainers.\n\nBTS (behind the scenes) – Tech related → Lab shots, deployment installs, team with hardware, demos.\n\nCredibility (events and visits) → Panels, keynotes, MoUs, VIP visits, competitions, certifications.\n\n\n🔹 Competitor Benchmarking\n\nProvided competitor pages (Advanced Communications & Electronics Systems Co. Ltd. (https://www.linkedin.com/company/advanced-communications-&-electriconics-systems-co.-ltd/\n) and Celona (https://www.linkedin.com/company/celonaio/\n)).\n\nConsider only their last 6 months of posts.\n\nIdentify their strongest content patterns (themes, formats, cadence, visuals, hashtags, CTAs).\n\nFor each strong practice, explicitly check:\n\nWhat did the competitor do well (based on interactions/engagement)?\n\nDid MOBISENSE also apply the same tactic?\n\nIf not, recommend MOBISENSE adopt it.\n\nProvide 3–5 competitor-informed recommendations for MOBISENSE.\n\nAlways state which competitor inspired each recommendation.\n\nExample: “Inspired by Celona: They drove high engagement with short carousel explainers. MOBISENSE has not used this format in the last 6 months → recommend adopting carousels for Educational posts.”\n\n\n🔹 Report Structure & Formatting (HTML ONLY)\n\n1. Produce a single self-contained HTML document with the following sections:\n\n  Executive Summary\n  \n  Blue header strip with white text (MOBISENSE branding style).\n  \n  2–4 concise bullets summarizing: total posts analyzed (6-month window), standout performance drivers\n\n2. Engagement Metrics Table\n\n-Professional HTML table with:\n    \n    Rank\n    \n    Category\n    \n    Post (hyperlinked to post_url)\n    \n    Post Creation Date\n    \n    Total Engagement (bold)\n    \n    Engagement Rate (as provided)\n    \n    CTR\n    \n    Impressions\n    \n    Clicks\n    \n    Notes\n\n-Style:\n\n  MOBISENSE blue headers (#0B63B6), white text.\n  \n  Alternating rows (light gray / white).\n  \n  Borders, clean spacing.\n  \n  Green highlight for highest engagement rates (top quartile).\n  \n  Soft gray for lowest quartile.\n\n3. Top Posts Analysis\n\nSubsections for each of the top 3–5 posts.\n\nFor each:\n\n  2–4 bullets explaining why it performed.\n  \n  Always consider the role of photos/visuals.\n  \n  Provide likely reasons for performance based on photo type:\n  \n    Event photos (panels, stage, crowds) → credibility, reach, thought leadership.\n    \n    Executive visits → authority, trust, institutional relevance.\n    \n    Product/tech visuals → innovation showcase, proof of capability.\n  \n  Note any CTR/impressions context.\n\n4. Strategic Recommendations\n\n  5–8 actionable strategies to amplify success (beyond current posts).\n  \n  Must include visual guidance\n\n5. Competitor-Informed Moves\n\n  3–5 specific recommendations directly tied to competitor practices.\n  \n  Frame them explicitly as:\n  \n  What the competitor did well (based on interactions).\n  \n  Whether MOBISENSE did the same in the last 6 months.\n  \n  If not, recommend MOBISENSE adopt it.\n  \n  Explicitly cite the competitor in each recommendation.\n\n\n🔹 Default Style Skeleton (Must Be Included)\n\nEmbed this <style> block in the <head> of the HTML document:\n\n<style>\n  body { font-family: Arial, sans-serif; color: #0f172a; margin: 0; padding: 0; }\n  h1, h2, h3 { margin: 0; }\n  .header { background-color: #0B63B6; color: #fff; padding: 16px; }\n  .section { padding: 20px; }\n  table { width: 100%; border-collapse: collapse; margin-top: 16px; }\n  th { background-color: #0B63B6; color: #fff; padding: 10px; text-align: left; }\n  td { padding: 10px; border: 1px solid #ddd; vertical-align: top; }\n  tr:nth-child(even) { background-color: #f5f7fa; }\n  .high { background-color: #e6f6ed; color: #0a6b3c; font-weight: bold; }\n  .low { background-color: #f2f2f2; color: #666; }\n  .bold { font-weight: bold; }\n  a { color: #0B63B6; text-decoration: none; }\n</style>\n\n\n🔹Edge Cases\n\nIf impressions or clicks are null/0 → display “—”.\n\nIf CTR missing but impressions + clicks exist → compute display CTR = clicks ÷ impressions (%), label “(computed)” in Notes.\n\nDeduplicate posts by post_url.\n\n\n🔹 Tone & Output Rules\n\nExecutive, concise, insight-driven.\n\nNo chatty style, no disclaimers.\n\nAlways write MOBISENSE in all caps.\n\nDeliver HTML only, styled as a corporate dashboard.\n\nDo not use Markdown or code fences.\n\nThe response must start with <!DOCTYPE html> and end with </html>.\n\nDo not include any text before <!DOCTYPE html> or after </html>.\n\nIf the model accidentally adds fences or extra text, remove them and re-emit clean HTML until compliant."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        -592,
+        480
+      ],
+      "id": "d563465a-4969-437b-b59d-ba580f400a0b",
+      "name": "AI Agent",
+      "notesInFlow": false
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        -272,
+        160
+      ],
+      "id": "cedc46ca-b213-4c8a-bdfc-11e0cdccc1c3",
+      "name": "Aggregate1"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-5-chat-latest",
+          "mode": "list",
+          "cachedResultName": "gpt-5-chat-latest"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -640,
+        640
+      ],
+      "id": "4ca5acd0-fdc7-4530-8767-dc1b12d9d3a5",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "pYsNFt5eDSHdhh43",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "example@company.com",
+        "subject": "=Mobisense LinkedIn page weekly analysis  - Week {{ $now.format(\"W\") }}",
+        "message": "={{ $json.output }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -272,
+        480
+      ],
+      "id": "514e1aab-d9a5-4ff4-bae0-5cd99e250371",
+      "name": "Send a message",
+      "webhookId": "1a1acbcb-9837-4c72-aab7-f361b7699272",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YjXtGqF7AuCCQE3A",
+          "name": "jitfit10@gmail.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "Scrape Linkedin",
+        "height": 256,
+        "width": 704,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -720,
+        -160
+      ],
+      "typeVersion": 1,
+      "id": "e6a659ea-bf38-45ec-b505-925a77e5ea6a",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "Analyze Content",
+        "height": 256,
+        "width": 704
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -720,
+        112
+      ],
+      "typeVersion": 1,
+      "id": "3f4acfe3-0b81-4ae0-b770-0153c79987a5",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "Write and email the report",
+        "height": 384,
+        "width": 704,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -720,
+        400
+      ],
+      "typeVersion": 1,
+      "id": "a48db322-56ce-4fb6-956f-f00f7d920fd6",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                3
+              ],
+              "triggerAtHour": 16
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -592,
+        -80
+      ],
+      "id": "66137bda-3ef1-43d5-8bb0-2cbe4dbd958c",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "177Yx2FQrzPVUY3YKrt8fj7QWlPleAlySuy2KYws65RI",
+          "mode": "list",
+          "cachedResultName": "linked in admin",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/177Yx2FQrzPVUY3YKrt8fj7QWlPleAlySuy2KYws65RI/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/177Yx2FQrzPVUY3YKrt8fj7QWlPleAlySuy2KYws65RI/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -272,
+        -80
+      ],
+      "id": "f4cf5ced-74d6-4725-80b1-ef3ba31c9f57",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "JNKQCblv7SXH9wdC",
+          "name": "jitfit10 new"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Aggregate1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "8131ecd8-1fdd-4937-ae10-5f1822a0e82f",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d755e5ce44728bcf6137490b86c05fb3770b50f6cdef6ce62b61619464084a41"
+  },
+  "id": "Ezs93NaWKIOOT7uR",
+  "tags": []
+}
